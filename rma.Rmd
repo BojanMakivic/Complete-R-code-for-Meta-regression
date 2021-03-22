@@ -47,7 +47,7 @@ random_eff<- rma.mv(yi=Fat_mean,V=Fat_var, mods= ~ Gender + Level,  random = ~ 1
 ```{r, echo = FALSE}
 random_eff
 ```
-# Bonferroni correction for p_values
+# Bonferroni correction for p_values for multiple comparisons 
 
 ```{r, echo=FALSE}
 comp <- function(x){
@@ -64,7 +64,7 @@ for (i in 1:length(random_eff$beta)){
 }
 ```
 
-# Bonferroni correction for CI
+# Multiple comparisons correction for CI
 ```{r, echo=FALSE}
 for (i in 1:length(random_eff$beta)){ 
 cat("\n",param[i],"upper : ", random_eff$beta[i] + random_eff$se[i] * qnorm(1-0.05/(2*comp(var))))

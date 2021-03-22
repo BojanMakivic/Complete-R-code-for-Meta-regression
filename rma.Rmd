@@ -1,0 +1,94 @@
+---
+title: "Volleyball meta analysis"
+author: "Bojan"
+date: "24 2 2021"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(global.device = TRUE, echo = TRUE)
+```
+
+## Libraries
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(meta)
+library(metafor)
+library(Matrix)
+library(readxl)
+library(plotrix)
+library(PerformanceAnalytics)
+```
+
+
+## Data
+
+```{r, echo=FALSE}
+#graphics.off()
+#rm(list=ls())
+
+#data <- read_excel("")
+data <- Data
+data<- data.frame(data)
+
+data$Method <- relevel(factor(data$Method), ref="Skinfold")# reference level
+data$Level <- relevel(factor(data$Level), ref="Regional")# reference level
+data$Gender <- relevel(factor(data$Gender), ref="m")
+
+# "yi" is variable of interest and "V" is variance of the same variable. Mods are moderator variables.
+random_eff<- rma.mv(yi=Fat_mean,V=Fat_var, mods= ~ Gender + Level,  random = ~ 1 | Studies, data=data, slab=paste(Studies))
+```
+
+## Summary
+
+
+```{r, echo = FALSE}
+random_eff
+```
+# Bonferroni correction for p_values
+
+```{r, echo=FALSE}
+comp <- function(x){
+  x*(x-1)/2
+}
+lev<- ifelse(length(random_eff[["formula.mods"]][[2]])==1, random_eff[["formula.mods"]][[2]],random_eff[["formula.mods"]][[2]][[2]])
+
+param <- row.names(random_eff$b)
+
+var <- length(unique(data[[lev]]))
+
+for (i in 1:length(random_eff$beta)){ 
+  cat("\n",param[i],": ", random_eff$pval[i] * comp(var))
+}
+```
+
+# Bonferroni correction for CI
+```{r, echo=FALSE}
+for (i in 1:length(random_eff$beta)){ 
+cat("\n",param[i],"upper : ", random_eff$beta[i] + random_eff$se[i] * qnorm(1-0.05/(2*comp(var))))
+cat("\n",param[i],"lower : ", random_eff$beta[i] - random_eff$se[i] * qnorm(1-0.05/(2*comp(var))))
+}
+```
+
+## Publication bias
+```{r, echo=FALSE}
+funnel(random_eff, level=c(90, 95, 99),shade=c("white", "gray", "darkgray"), refline=0)
+```
+
+# Forest plot
+```{r, echo=FALSE, fig.width = 20, fig.height = 15}
+forest(random_eff, addfit=FALSE, level= 95, header=TRUE,xlab="Fat %", ilab=cbind(data$n, data$Gender, paste(data$Level), paste(data$Method)), ilab.xpos=c(-25,-20,-13,-3)) # addfit logical to specify whether the summary estimate (for models without moderators) or fitted values (for models with moderators) should be added to the plot 
+
+op <- par(cex=0.75, font=2)
+text(c(-25,-20,-13,-3), 73, c("Sample", "Gender", "Level", "Method"))
+```
+
+## Bar plot
+```{r, echo=FALSE}
+size=rescale(1/data$vi,c(0.5,2))
+plot(Fat_mean~Method,data=data,cex=size,las=1, ylab="Fat %")
+```
+
+

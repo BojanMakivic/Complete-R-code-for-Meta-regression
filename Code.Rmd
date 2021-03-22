@@ -1,7 +1,7 @@
 ---
-title: "Volleyball meta analysis"
+title: "Sport meta analysis"
 author: "Bojan"
-date: "24 2 2021"
+date: ""
 output:
   word_document: default
   html_document:

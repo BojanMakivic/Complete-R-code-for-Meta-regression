@@ -79,8 +79,7 @@ funnel(random_eff, level=c(90, 95, 99),shade=c("white", "gray", "darkgray"), ref
 
 # Forest plot
 ```{r, echo=FALSE, fig.width = 20, fig.height = 15}
-forest(random_eff, addfit=FALSE, level= 95, header=TRUE,xlab="Fat %", ilab=cbind(data$n, data$Gender, paste(data$Level), paste(data$Method)), ilab.xpos=c(-25,-20,-13,-3)) # addfit logical to specify whether the summary estimate (for models without moderators) or fitted values (for models with moderators) should be added to the plot 
-
+forest(random_eff, addfit=FALSE, level= 95, header=TRUE,xlab="Fat %", ilab=cbind(data$n, data$Gender, paste(data$Level), paste(data$Method)), ilab.xpos=c(-25, -20,-13,-3)) # addfit logical to specify whether the summary estimate (for models without moderators) or fitted values (for models with moderators) should be added to the plot
 op <- par(cex=0.75, font=2)
 text(c(-25,-20,-13,-3), 73, c("Sample", "Gender", "Level", "Method"))
 ```

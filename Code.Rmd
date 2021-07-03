@@ -20,55 +20,67 @@ library(Matrix)
 library(readxl)
 library(plotrix)
 library(PerformanceAnalytics)
+library(tidyverse)
+library(MuMIn)
+library(ggplot2)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+library(dplyr)
 ```
-
-
 ## Data
 
 ```{r, echo=FALSE}
-#graphics.off()
-#rm(list=ls())
+graphics.off()
+rm(list=ls())
 
-#data <- read_excel("")
-data <- Data
+data <- read_excel("C:/Users/Bojan/Desktop/Basketball_meta/Data.XLSX")
 data<- data.frame(data)
 
-data$Method <- relevel(factor(data$Method), ref="Skinfold")# reference level
-data$Level <- relevel(factor(data$Level), ref="Regional")# reference level
-data$Gender <- relevel(factor(data$Gender), ref="m")
+data$Method <- relevel(factor(data$Method), ref="DXA")# reference level
+data$Level <- relevel(factor(data$Level), ref="International")# reference level
+data$Gender <- relevel(factor(data$Gender), ref="M")
 
-# "yi" is variable of interest and "V" is variance of the same variable. Mods are moderator variables.
-random_eff<- rma.mv(yi=Fat_mean,V=Fat_var, mods= ~ Gender + Level,  random = ~ 1 | Studies, data=data, slab=paste(Studies))
+
+random_eff<- rma.mv(yi=Fat_mean,V=Fat_var, mods= ~ Gender + Level + Method,  random = ~ 1 | Author, data=data, slab=paste(Author))
 ```
-
 ## Summary
-
 
 ```{r, echo = FALSE}
 random_eff
 ```
-# Bonferroni correction for p_values for multiple comparisons 
+
+# Bonferroni correction for p_values
 
 ```{r, echo=FALSE}
-comp <- function(x){
-  x*(x-1)/2
+comp <- function(x) {
+  x * (x - 1) / 2
 }
-lev<- ifelse(length(random_eff[["formula.mods"]][[2]])==1, random_eff[["formula.mods"]][[2]],random_eff[["formula.mods"]][[2]][[2]])
+lev <- ifelse(length(random_eff[["formula.mods"]][[2]]) == 1, length(unique(data[[random_eff[["formula.mods"]][[2]]]])), ifelse(
+  length(random_eff[["formula.mods"]][[2]][(paste(random_eff[["formula.mods"]][[2]]) != "+") == TRUE]) == 2 && 
+    length(random_eff[["formula.mods"]][[2]][(paste(random_eff[["formula.mods"]][[2]][[2]]) != "+") == TRUE]) == 3, # it checks which values in call does not have "+" and counts TRUE values. In order to work with three mods it needs one more condition. 
+  length(unique(data[[random_eff[["formula.mods"]][[2]][[2]]]])) +
+    length(unique(data[[random_eff[["formula.mods"]][[2]][[3]]]])), length(unique(data[[random_eff[["formula.mods"]][[2]][[2]][[2]]]])) + length(unique(data[[random_eff[["formula.mods"]][[2]][[2]][[3]]]])) + length(unique(data[[random_eff[["formula.mods"]][[2]][[3]]]]))
+))
 
 param <- row.names(random_eff$b)
 
-var <- length(unique(data[[lev]]))
-
-for (i in 1:length(random_eff$beta)){ 
-  cat("\n",param[i],": ", random_eff$pval[i] * comp(var))
+if (comp(lev) == 1) { # it checks does the comparisons are equal 1 and if so then it returns p_values from model
+  for (i in 1:length(random_eff$beta)) {
+    cat("\n", param[i], ": ", random_eff$pval[i])
+  }
+} else {
+  for (i in 1:length(random_eff$beta)) {
+    cat("\n", param[i], ": ", p.adjust(random_eff$pval, method = "bonferroni", comp(lev))[i])
+  }
 }
 ```
 
 # Multiple comparisons correction for CI
 ```{r, echo=FALSE}
 for (i in 1:length(random_eff$beta)){ 
-cat("\n",param[i],"upper : ", random_eff$beta[i] + random_eff$se[i] * qnorm(1-0.05/(2*comp(var))))
-cat("\n",param[i],"lower : ", random_eff$beta[i] - random_eff$se[i] * qnorm(1-0.05/(2*comp(var))))
+cat("\n",param[i],"upper : ", random_eff$beta[i] + random_eff$se[i] * qnorm(1-0.05/(2*comp(lev))))
+cat("\n",param[i],"lower : ", random_eff$beta[i] - random_eff$se[i] * qnorm(1-0.05/(2*comp(lev))))
 }
 ```
 
@@ -79,9 +91,9 @@ funnel(random_eff, level=c(90, 95, 99),shade=c("white", "gray", "darkgray"), ref
 
 # Forest plot
 ```{r, echo=FALSE, fig.width = 20, fig.height = 15}
-forest(random_eff, addfit=FALSE, level= 95, header=TRUE,xlab="Fat %", ilab=cbind(data$n, data$Gender, paste(data$Level), paste(data$Method)), ilab.xpos=c(-25, -20,-13,-3)) # addfit logical to specify whether the summary estimate (for models without moderators) or fitted values (for models with moderators) should be added to the plot
+forest(random_eff, addfit=TRUE, level= 95, header=TRUE,xlab="Fat %", ilab=cbind(data$n, paste(data$Gender), paste(data$Level), paste(data$Method)), ilab.xpos=c(-15,-12,-8,-3)) # addfit logical to specify whether the summary estimate (for models without moderators) or fitted values (for models with moderators) should be added to the plot 
 op <- par(cex=0.75, font=2)
-text(c(-25,-20,-13,-3), 73, c("Sample", "Gender", "Level", "Method"))
+text(c(-15,-12,-8,-3), 95, c("Sample", "Gender", "Level", "Method"))
 ```
 
 ## Bar plot
